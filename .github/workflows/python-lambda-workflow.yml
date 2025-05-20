@@ -1,0 +1,64 @@
+name: Python Lambda Test and Run
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  test-and-run:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'  # Specify the Python version used by Lambda
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install boto3
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Set up environment variables
+      run: |
+        echo "TABLE_NAME=PageHitCounters" >> $GITHUB_ENV
+        
+    - name: Run unit tests
+      id: run_tests
+      run: |
+        cd lambda
+        python -m unittest tests_for_index.py
+      continue-on-error: true  # Don't fail the job immediately on test failure
+      
+    - name: Check test results
+      run: |
+        if [[ "${{ steps.run_tests.outcome }}" == "failure" ]]; then
+          echo "::error::Unit tests failed. Fix the issues before continuing."
+          exit 1
+        else
+          echo "Unit tests passed successfully."
+        fi
+      
+    - name: Run Lambda function
+      if: steps.run_tests.outcome == 'success'
+      run: |
+        cd lambda
+        echo "Running Lambda function in simulation mode..."
+        python -c "import index; print('Lambda function loaded successfully')"
+        # Note: We don't actually invoke the lambda_handler since it would need DynamoDB
+        # In a real scenario, you might want to use localstack or similar for local DynamoDB
+      env:
+        AWS_ACCESS_KEY_ID: 'dummy-access-key'
+        AWS_SECRET_ACCESS_KEY: 'dummy-secret-key'
+        AWS_DEFAULT_REGION: 'us-east-1'
+        TABLE_NAME: 'PageHitCounters'
+        
+    - name: Notify on success
+      if: steps.run_tests.outcome == 'success'
+      run: |
+        echo "All tests passed and Lambda function loaded successfully"
