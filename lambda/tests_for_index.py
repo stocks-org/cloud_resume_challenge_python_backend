@@ -1,8 +1,12 @@
 import unittest
 import json
 import os
+import boto3
 from unittest.mock import patch, MagicMock
 from decimal import Decimal
+
+# Set AWS region for boto3 before importing index
+os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 
 # Import the module to test
 import index
