@@ -1,12 +1,14 @@
-name: Python Lambda Test and Run
+name: Python Lambda Test and CDK Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]  # CDK deployment only runs on main branch
+  pull_request:
+    branches: [ main ]  # Tests run on PRs but no deployment
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
-  test-and-run:
+  test-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -18,11 +20,28 @@ jobs:
       with:
         python-version: '3.9'  # Specify the Python version used by Lambda
         
-    - name: Install dependencies
+    - name: Set up Node.js for CDK
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'  # CDK requires Node.js
+        
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install boto3
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Install CDK and TypeScript dependencies
+      run: |
+        npm install -g aws-cdk
+        npm install  # Install project dependencies from package.json
+        
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1  # Specify your preferred AWS region
         
     - name: Set up environment variables
       run: |
@@ -49,21 +68,35 @@ jobs:
           echo "Unit tests passed successfully."
         fi
       
-    - name: Run Lambda function
+    - name: Run Lambda function validation
       if: steps.run_tests.outcome == 'success'
       run: |
         cd lambda
-        echo "Running Lambda function in simulation mode..."
+        echo "Validating Lambda function can be imported..."
         python -c "import index; print('Lambda function loaded successfully')"
         # Note: We don't actually invoke the lambda_handler since it would need DynamoDB
-        # In a real scenario, you might want to use localstack or similar for local DynamoDB
-      env:
-        AWS_ACCESS_KEY_ID: 'dummy-access-key'
-        AWS_SECRET_ACCESS_KEY: 'dummy-secret-key'
-        AWS_DEFAULT_REGION: 'us-east-1'
-        TABLE_NAME: 'PageHitCounters'
         
-    - name: Notify on success
+    - name: Build TypeScript CDK code
       if: steps.run_tests.outcome == 'success'
       run: |
-        echo "All tests passed and Lambda function loaded successfully"
+        npm run build  # Compile TypeScript to JavaScript
+        
+    - name: Deploy CDK Stack
+      if: steps.run_tests.outcome == 'success' && github.ref == 'refs/heads/main'
+      run: |
+        echo "Deploying CDK stack to AWS..."
+        cdk deploy --require-approval never
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+        
+    - name: Notify on success
+      if: steps.run_tests.outcome == 'success' && github.ref == 'refs/heads/main'
+      run: |
+        echo "✅ All tests passed and CDK stack deployed successfully!"
+        
+    - name: Notify on test success (non-main branch)
+      if: steps.run_tests.outcome == 'success' && github.ref != 'refs/heads/main'
+      run: |
+        echo "✅ All tests passed! CDK deployment skipped (not on main branch)"
