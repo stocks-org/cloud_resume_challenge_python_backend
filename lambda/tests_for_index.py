@@ -18,7 +18,7 @@ class TestLambdaFunction(unittest.TestCase):
         """Set up test fixtures."""
         # Ensure the environment variable exists for tests
         if 'TABLE_NAME' not in os.environ:
-            os.environ['TABLE_NAME'] = 'PageHitCounters'
+            os.environ['TABLE_NAME'] = 'HitCounterStack-PageHitCounters9E49A4DA-K5SS4LYSNL2F'
     
     @patch('index.table')
     def test_lambda_handler_success(self, mock_table):
