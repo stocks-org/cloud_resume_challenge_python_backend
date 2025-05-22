@@ -31,10 +31,9 @@ jobs:
         pip install boto3
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         
-    - name: Install CDK and TypeScript dependencies
+    - name: Install CDK
       run: |
         npm install -g aws-cdk@latest
-        npm install  # Install project dependencies from package.json
         
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
