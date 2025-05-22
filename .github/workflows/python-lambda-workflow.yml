@@ -81,8 +81,29 @@ jobs:
       run: |
         npm run build  # Compile TypeScript to JavaScript
         
-    - name: Deploy CDK Stack
+    - name: Check for CDK changes
       if: steps.run_tests.outcome == 'success' && github.ref == 'refs/heads/main'
+      id: cdk_diff
+      run: |
+        echo "Checking for CDK stack changes..."
+        
+        # Run cdk diff and capture output
+        if cdk diff 2>&1 | grep -q "There were no differences"; then
+          echo "No changes detected in CDK stack"
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Changes detected in CDK stack"  
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "CDK Diff Output:"
+          cdk diff
+        fi
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+        
+    - name: Deploy CDK Stack
+      if: steps.run_tests.outcome == 'success' && github.ref == 'refs/heads/main' && steps.cdk_diff.outputs.has_changes == 'true'
       run: |
         echo "Deploying CDK stack to AWS..."
         cdk deploy --require-approval never
@@ -91,8 +112,13 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: us-east-1
         
+    - name: Skip deployment notification
+      if: steps.run_tests.outcome == 'success' && github.ref == 'refs/heads/main' && steps.cdk_diff.outputs.has_changes == 'false'
+      run: |
+        echo "🔄 No changes detected - CDK deployment skipped"
+        
     - name: Notify on success
-      if: steps.run_tests.outcome == 'success' && github.ref == 'refs/heads/main'
+      if: steps.run_tests.outcome == 'success' && github.ref == 'refs/heads/main' && steps.cdk_diff.outputs.has_changes == 'true'
       run: |
         echo "✅ All tests passed and CDK stack deployed successfully!"
         
