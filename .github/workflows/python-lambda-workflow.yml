@@ -33,7 +33,7 @@ jobs:
         
     - name: Install CDK and TypeScript dependencies
       run: |
-        npm install -g aws-cdk
+        npm install -g aws-cdk@latest
         npm install  # Install project dependencies from package.json
         
     - name: Configure AWS credentials
