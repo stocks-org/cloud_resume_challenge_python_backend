@@ -1,6 +1,6 @@
 # Welcome to your CDK TypeScript project
 
-This is a blank project for CDK development with TypeScript.
+A project to deploy the backend infrastructure for the Author's AWS Cloud Resume Challenge.
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
