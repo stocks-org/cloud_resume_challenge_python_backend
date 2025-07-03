@@ -17,17 +17,17 @@ jobs:
     
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'  # Specify the Python version used by Lambda
+        python-version: '3.12'  # Python version used by Lambda function
         
     - name: Set up Node.js for CDK
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18'  # CDK requires Node.js
+        node-version: '20'
         
     - name: Install Python dependencies
       run: |
