@@ -21,7 +21,7 @@ export class HitCounterStack extends cdk.Stack {
 
     // Lambda function for hit counter
     const hitCounterFunction = new lambda.Function(this, 'HitCounterFunction', {
-      runtime: lambda.Runtime.PYTHON_3_9,
+      runtime: lambda.Runtime.PYTHON_3_12,
       handler: 'index.lambda_handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../lambda')), // Assumes code is in a 'lambda' directory
       environment: {
